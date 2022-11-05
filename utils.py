@@ -2,8 +2,12 @@ import requests
 import os
 import re
 import json
+from bs4 import BeautifulSoup as BS
+from bs4.element import NavigableString
+
 from config import *
 
+root_path = os.path.dirname(os.path.abspath(__file__))
 
 replace_items = {
     "<": "&lt;",
@@ -27,88 +31,95 @@ def findAllFile(base):
 
 def wiki2link(m):
     title = m.group(1)
-    return f"[{title}](http://wiki.dds-sysu.tech/display/~{USER}/{title})"
+    alias = title
+    if "|" in title:
+        alias, title = title.split("|")
+    return f"[{alias}](http://wiki.dds-sysu.tech/display/~{USER}/{title})"
 
 
-class Confluence():
+def md_meta(m):
+    meta = m.group(1)
+    return meta.replace("\n", "\n> ") + "\n"
+
+
+def get_page_id(string, force=False):
+    try:
+        return re.findall(r"[?&]pageId=(\d+)", string)[0]
+    except IndexError:
+        if force:
+            response = requests.get(
+                "http://wiki.dds-sysu.tech/display/~wbenature/"+string.split('/')[-1], headers=headers)
+            soup = BS(response.text, "lxml")
+            return get_page_id(soup.select("#editPageLink")[0]['href'])
+        else:
+            return None
+
+
+class Tree():
     def __init__(self):
-        self.version = 17
-        self.try_num = 0
+        self.tree = []
+        self.pages = {}
 
-    def reset(self):
-        self.try_num = 0
+        self.base_id = self._get_base_id()
 
-    def gen_content(self, markdown):
-        self.reset()
-        markdown = re.sub(r"^---.*?\n---", "", markdown, count=1, flags=re.S)
-        markdown = re.sub(r"\[\[([^\[\]\s]+)\]\]", wiki2link, markdown)
-        for k, v in replace_items.items():
-            markdown = markdown.replace(k, v)
-        content = f"<p class=\"auto-cursor-target\"><br /></p><table class=\"wysiwyg-macro\" style=\"background-image: url('http://wiki.dds-sysu.tech/plugins/servlet/confluence/placeholder/macro-heading?definition=e25vdGV9&amp;locale=en_US&amp;version=2'); background-repeat: no-repeat;\" data-macro-name=\"note\" data-macro-schema-version=\"1\" data-macro-body-type=\"RICH_TEXT\" data-macro-id=\"aa1f3166-0644-4546-b0e3-0cf62607bcdb\"><tbody><tr><td class=\"wysiwyg-macro-body\"><p>本页面为脚本自动上传，额外修改将有被覆盖风险。</p></td></tr></tbody></table><p class=\"auto-cursor-target\"><br /></p><table class=\"wysiwyg-macro\" style=\"background-image: url('http://wiki.dds-sysu.tech/plugins/servlet/confluence/placeholder/macro-heading?definition=e21hcmtkb3dufQ&amp;locale=en_US&amp;version=2'); background-repeat: no-repeat;\" data-macro-name=\"markdown\" data-macro-schema-version=\"1\" data-macro-body-type=\"PLAIN_TEXT\" data-macro-id=\"29063946-553e-4373-a400-b4dae28334b7\"><tbody><tr><td class=\"wysiwyg-macro-body\"><pre>{markdown}</pre></td></tr></tbody></table><p class=\"auto-cursor-target\"><br /></p>"
-        return content
+    def _get_base_id(self):
+        json_path = os.path.join(root_path, f"cache/{USER}.json")
+        try:
+            with open(json_path, "r") as f:
+                data = json.load(f)
+            base_id = data['base_page_id']
+        except:
+            responce = requests.get(
+                f"http://wiki.dds-sysu.tech/spaces/viewspace.action?key=~{USER}", headers=headers)
+            soup = BS(responce.text, "lxml")
+            soup.select('.name')[0].next_element
+            base_id = get_page_id(soup.select(
+                '.name')[0].next_element['href'], force=True)
+        return base_id
 
-    def read(self, fn):
-        # with open(os.path.join(sync_folder, fn), "r") as f:
-        with open(fn, "r") as f:
-            markdown = f.read()
-        self.content = self.gen_content(markdown)
-        page_id = re.findall("confluence:[ ]*(\d+)", markdown)
-        if len(page_id) == 0:
-            print("No confluence page id")
-            return False
-        self.current_page_id = page_id[0]
-        self.title = fn.split("/")[-1].replace(".md", "")
-        print(self.title)
-        return True
+    def _get_children(self):
+        depth = 99
+        naturalchildren_url = f"http://wiki.dds-sysu.tech/plugins/pagetree/naturalchildren.action?&sort=position&reverse=false&disableLinks=false&expandCurrent=true&placement=sidebar&hasRoot=true&pageId={self.base_id}&treeId=0&startDepth={depth}"
+        responce = requests.get(naturalchildren_url, headers=headers)
+        with open("dev/temp.html", "w") as f:
+            f.write(responce.text)
+        soup = BS(responce.text, "lxml")
+        return soup
 
-    def gen_payload(self):
-        payload = {
-            "status": "current",
-            "title": self.title,
-            "space": {"key": f"~{USER}"},
-            "body": {
-                "editor": {
-                    "value": self.content,
-                    "representation": "editor",
-                    "content": {"id": self.current_page_id}
-                }
-            },
-            "id": self.current_page_id,
-            "type": "page",
-            "version": {
-                "number": self.version,
-                "message": "",
-                "minorEdit": False,
-            },
-        }
-        # print(payload)
-        return payload
+    def spider(self, sub_tree=None, pointer=None, prefix=[]):
+        if sub_tree is None:
+            sub_tree = self.tree
+        if pointer is None:
+            soup = self._get_children()
+            pointer = soup.body.ul.li
 
-    def update_page(self):
-        response = requests.put(
-            f"http://wiki.dds-sysu.tech/rest/api/content/{self.current_page_id}",
-            headers=headers,
-            json=self.gen_payload()
-        )
-        if response.status_code == 200:
-            return True
-        elif response.status_code == 409:
-            try:
-                current_version = re.findall(
-                    r'Current version is: (\d+)', json.loads(response.text)['message'])[0]
-                # print("current version:", current_version)
-                self.version = int(current_version) + 1
-                self.try_num += 1
-                if self.try_num < TRY_MAX:
-                    # print("try again", self.version)
-                    # time.sleep(15)
-                    return self.update_page()
-                else:
-                    print("fail too many times, exit.")
-                    return False
-            except Exception as e:
-                print(e)
-                return False
-        print(response.status_code)
-        print(response.text)
-        return False
+        while pointer is not None:
+            has_children = len(pointer.select('.plugin_pagetree_childtoggle_container')[
+                               0].select(".no-children")) == 0
+            a = pointer.select('.plugin_pagetree_children_span')[
+                0].select('a')[0]
+            title = a.text
+            page_id = get_page_id(a['href'], force=False)
+            sub_tree.append(dict(title=title, children=[]))
+            self.pages[title] = dict(page_id=page_id, prefix=prefix)
+            if has_children:
+                self.spider(sub_tree[-1]['children'],
+                            pointer=pointer.ul.li, prefix=prefix+[title])
+            # break
+            while True:
+                pointer = pointer.next_sibling
+                if not isinstance(pointer, NavigableString):
+                    break
+
+    def save(self):
+        cache_folder = os.path.join(root_path, "cache")
+        if not os.path.exists(cache_folder):
+            os.mkdir(cache_folder)
+        with open(os.path.join(cache_folder, f"{USER}.json"), "w") as f:
+            json.dump(
+                dict(
+                    base_page_id=self.base_id,
+                    pages=self.pages,
+                    tree=self.tree,
+                ),
+                f, ensure_ascii=False)
