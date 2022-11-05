@@ -27,7 +27,7 @@ class Confluence():
         markdown = re.sub(r"\[\[([^\[\]\s]+)\]\]", wiki2link, markdown)
         for k, v in replace_items.items():
             markdown = markdown.replace(k, v)
-        content = f"<p class=\"auto-cursor-target\"><br /></p><table class=\"wysiwyg-macro\" style=\"background-image: url('http://wiki.dds-sysu.tech/plugins/servlet/confluence/placeholder/macro-heading?definition=e25vdGV9&amp;locale=en_US&amp;version=2'); background-repeat: no-repeat;\" data-macro-name=\"note\" data-macro-schema-version=\"1\" data-macro-body-type=\"RICH_TEXT\" data-macro-id=\"aa1f3166-0644-4546-b0e3-0cf62607bcdb\"><tbody><tr><td class=\"wysiwyg-macro-body\"><p>本页面为脚本自动上传，额外修改将有被覆盖风险。</p></td></tr></tbody></table><p class=\"auto-cursor-target\"><br /></p><table class=\"wysiwyg-macro\" style=\"background-image: url('http://wiki.dds-sysu.tech/plugins/servlet/confluence/placeholder/macro-heading?definition=e21hcmtkb3dufQ&amp;locale=en_US&amp;version=2'); background-repeat: no-repeat;\" data-macro-name=\"markdown\" data-macro-schema-version=\"1\" data-macro-body-type=\"PLAIN_TEXT\" data-macro-id=\"29063946-553e-4373-a400-b4dae28334b7\"><tbody><tr><td class=\"wysiwyg-macro-body\"><pre>{markdown}</pre></td></tr></tbody></table><p class=\"auto-cursor-target\"><br /></p>"
+        content = f"<p class=\"auto-cursor-target\"><br /></p><table class=\"wysiwyg-macro\" style=\"background-image: url('{BASE_URL}/plugins/servlet/confluence/placeholder/macro-heading?definition=e25vdGV9&amp;locale=en_US&amp;version=2'); background-repeat: no-repeat;\" data-macro-name=\"note\" data-macro-schema-version=\"1\" data-macro-body-type=\"RICH_TEXT\" data-macro-id=\"aa1f3166-0644-4546-b0e3-0cf62607bcdb\"><tbody><tr><td class=\"wysiwyg-macro-body\"><p><span style=\"color: #a5adba;\"><em>本页面为脚本自动上传，额外修改将有被覆盖风险。</em></span></p></td></tr></tbody></table><p class=\"auto-cursor-target\"><br /></p><table class=\"wysiwyg-macro\" style=\"background-image: url('{BASE_URL}/plugins/servlet/confluence/placeholder/macro-heading?definition=e21hcmtkb3dufQ&amp;locale=en_US&amp;version=2'); background-repeat: no-repeat;\" data-macro-name=\"markdown\" data-macro-schema-version=\"1\" data-macro-body-type=\"PLAIN_TEXT\" data-macro-id=\"29063946-553e-4373-a400-b4dae28334b7\"><tbody><tr><td class=\"wysiwyg-macro-body\"><pre>{markdown}</pre></td></tr></tbody></table><p class=\"auto-cursor-target\"><br /></p>"
         self.markdown = markdown
         return content
 
@@ -102,7 +102,7 @@ class Confluence():
 
     def update_page(self):
         response = requests.put(
-            f"http://wiki.dds-sysu.tech/rest/api/content/{self.page_id}",
+            f"{BASE_URL}/rest/api/content/{self.page_id}",
             headers=headers,
             json=self.gen_payload()
         )
@@ -133,14 +133,14 @@ class Confluence():
     def create_page(self):
         self.version = 1
         responce = requests.get(
-            f"http://wiki.dds-sysu.tech/pages/createpage.action?spaceKey=~wbenature&fromPageId={self.cache['base_page_id']}&src=quick-create", headers=headers)
+            f"{BASE_URL}/pages/createpage.action?spaceKey=~wbenature&fromPageId={self.cache['base_page_id']}&src=quick-create", headers=headers)
         soup = BS(responce.text, "lxml")
         page_id = soup.select('meta[name="ajs-content-id"]')[0]['content']
         return page_id
 
     def is_modified(self):
         responce = requests.get(
-            f"http://wiki.dds-sysu.tech/pages/resumedraft.action?draftId={self.page_id}", headers=headers)
+            f"{BASE_URL}/pages/resumedraft.action?draftId={self.page_id}", headers=headers)
         soup = BS(responce.text, "lxml")
         soup_md = BS(soup.select("#wysiwygTextarea")[0].next_element, 'lxml')
 

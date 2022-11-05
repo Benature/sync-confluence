@@ -5,9 +5,15 @@ import json
 from bs4 import BeautifulSoup as BS
 from bs4.element import NavigableString
 
-from config import *
-
 root_path = os.path.dirname(os.path.abspath(__file__))
+
+if not os.path.exists(os.path.join(root_path, 'config.py')):
+    import shutil
+    shutil.copyfile(os.path.join(root_path, 'config_sample.py'),
+                    os.path.join(root_path, 'config.py'))
+if True:
+    from config import *
+
 
 replace_items = {
     "<": "&lt;",
@@ -34,7 +40,7 @@ def wiki2link(m):
     alias = title
     if "|" in title:
         alias, title = title.split("|")
-    return f"[{alias}](http://wiki.dds-sysu.tech/display/~{USER}/{title})"
+    return f"[{alias}]({BASE_URL}/display/~{USER}/{title})"
 
 
 def md_meta(m):
@@ -48,7 +54,7 @@ def get_page_id(string, force=False):
     except IndexError:
         if force:
             response = requests.get(
-                "http://wiki.dds-sysu.tech/display/~wbenature/"+string.split('/')[-1], headers=headers)
+                f"{BASE_URL}/display/~wbenature/"+string.split('/')[-1], headers=headers)
             soup = BS(response.text, "lxml")
             return get_page_id(soup.select("#editPageLink")[0]['href'])
         else:
@@ -70,7 +76,7 @@ class Tree():
             base_id = data['base_page_id']
         except:
             responce = requests.get(
-                f"http://wiki.dds-sysu.tech/spaces/viewspace.action?key=~{USER}", headers=headers)
+                f"{BASE_URL}/spaces/viewspace.action?key=~{USER}", headers=headers)
             soup = BS(responce.text, "lxml")
             soup.select('.name')[0].next_element
             base_id = get_page_id(soup.select(
@@ -79,7 +85,7 @@ class Tree():
 
     def _get_children(self):
         depth = 99
-        naturalchildren_url = f"http://wiki.dds-sysu.tech/plugins/pagetree/naturalchildren.action?&sort=position&reverse=false&disableLinks=false&expandCurrent=true&placement=sidebar&hasRoot=true&pageId={self.base_id}&treeId=0&startDepth={depth}"
+        naturalchildren_url = f"{BASE_URL}/plugins/pagetree/naturalchildren.action?&sort=position&reverse=false&disableLinks=false&expandCurrent=true&placement=sidebar&hasRoot=true&pageId={self.base_id}&treeId=0&startDepth={depth}"
         responce = requests.get(naturalchildren_url, headers=headers)
         with open("dev/temp.html", "w") as f:
             f.write(responce.text)

@@ -7,5 +7,5 @@ python sync.py
 ```
 
 ## TODO
-- [ ] auto create new page
-- [ ] check whether the page is modified before update, if not, jump this page.
+- [x] auto create new page
+- [x] check whether the page is modified before update, if not, jump this page.
