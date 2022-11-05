@@ -2,6 +2,14 @@
 
 Sync local markdown files to Confluence (server).
 
+Init config file:
+
+```shell
+cp config_sample.py config.py
+```
+
+Usage:
+
 ```shell
 python sync.py
 ```

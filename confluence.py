@@ -58,10 +58,11 @@ class Confluence():
             print("No confluence page id found, creating a new page for it...")
             self.page_id = self.create_page()
             print("Adding confluence page id to markdown metadata...")
-            markdown = re.sub(r"^---\n.*?\n---", lambda m: m.group(0).rstrip('-') +
-                              f"confluence: {self.page_id}\n---", markdown, flags=re.S)
-            with open(fn, "w") as f:
-                f.write(markdown)
+            if not empty:
+                markdown = re.sub(r"^---\n.*?\n---", lambda m: m.group(0).rstrip('-') +
+                                  f"confluence: {self.page_id}\n---", markdown, flags=re.S)
+                with open(fn, "w") as f:
+                    f.write(markdown)
         return True
 
     def gen_payload(self):
