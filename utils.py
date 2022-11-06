@@ -51,8 +51,11 @@ def wiki2link(m):
     title = m.group(1)
     alias = title
     heading = ""
+
     if "|" in title:
-        alias, title = title.split("|")
+        title, alias = title.split("|")
+        title = title.rstrip("\\")
+
     if "#" in title:
         title, heading = title.split("#")
 
@@ -66,6 +69,16 @@ def wiki2link(m):
 def md_meta(m):
     meta = m.group(1)
     return meta.replace("\n", "\n> ") + "\n"
+
+
+def upper_content(m):
+    '''^[upper content]'''
+    def func(match): return "^^"+match.group(0)[2:-1]+"^^"
+    content = m.group(0)
+    content = re.sub(r"\^\[(?:[^\[]*?\[[^\[\]]+?\]\(.*?\).*?)*?\]",
+                     func, content)
+    content = re.sub(r"(?!\^)\^\[.*?\]", func, content)
+    return content
 
 
 def get_page_id(string, force=False):
