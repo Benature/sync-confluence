@@ -31,7 +31,16 @@ class Confluence():
         self.markdown = markdown
         return content
 
-    def read(self, fn, empty=False):
+    def get_page_id(self, title):
+        page_id = self.cache['pages'][title]['page_id']
+        if page_id is None:
+            page_id = get_page_id(title, force=True)
+            self.cache['pages'][title]['page_id'] = page_id
+            with open(self.cache_path, "w") as f:
+                json.dump(self.cache, f, ensure_ascii=False)
+        return page_id
+
+    def read(self, fn, empty=False, parent_title=None):
         if empty:
             markdown = ""
             assert fn != "" and "/" not in fn
@@ -41,28 +50,37 @@ class Confluence():
             with open(fn, "r") as f:
                 markdown = f.read()
             self.title = fn.split("/")[-1].replace(".md", "")
-            self.parent_title = os.path.dirname(fn).split("/")[-1]
+            if parent_title is None:
+                self.parent_title = os.path.dirname(fn).split("/")[-1]
+            else:
+                self.parent_title = parent_title
             print("title       :", self.title)
             print("parent title:", self.parent_title)
 
-        self.markdown = markdown
-        self.content = self.gen_content(markdown)
-
         try:
+            self.content = self.gen_content(markdown)
             self.page_id = re.findall(
                 "confluence:[ ]*(\d+)", markdown)[0]
             if not self.is_modified():
                 print("⏭  No modified, jumping this page...")
                 return False
         except IndexError:
-            print("No confluence page id found, creating a new page for it...")
-            self.page_id = self.create_page()
+            print("No confluence page id is recorded in the markdown file.")
+            if self.title in self.cache['pages']:
+                self.page_id = self.get_page_id(self.title)
+                print(
+                    f"Find the page id in the pages tree, the id is {self.page_id}")
+            else:
+                print("No confluence page id found, creating a new page for it...")
+                self.page_id = self.create_page()
             print("Adding confluence page id to markdown metadata...")
             if not empty:
                 markdown = re.sub(r"^---\n.*?\n---", lambda m: m.group(0).rstrip('-') +
                                   f"confluence: {self.page_id}\n---", markdown, flags=re.S)
                 with open(fn, "w") as f:
                     f.write(markdown)
+                self.content = self.gen_content(markdown)
+
         return True
 
     def gen_payload(self):
@@ -87,18 +105,17 @@ class Confluence():
         }
 
         if self.parent_title in self.cache['pages']:
-            parent_cache = self.cache['pages'][self.parent_title]
-            parent_page_id = parent_cache['page_id']
-            if parent_page_id is None:
-                parent_page_id = get_page_id(self.parent_title, force=True)
-                self.cache['pages'][self.parent_title]['page_id'] = parent_page_id
-                with open(self.cache_path, "w") as f:
-                    json.dump(self.cache, f, ensure_ascii=False)
+            parent_page_id = self.get_page_id(self.parent_title)
+            # parent_cache = self.cache['pages'][self.parent_title]
+            # parent_page_id = parent_cache['page_id']
+            # if parent_page_id is None:
+            #     parent_page_id = get_page_id(self.parent_title, force=True)
+            #     self.cache['pages'][self.parent_title]['page_id'] = parent_page_id
+            #     with open(self.cache_path, "w") as f:
+            #         json.dump(self.cache, f, ensure_ascii=False)
 
             payload.update(
                 {"ancestors": [{"id": parent_page_id, "type": "page"}]})
-
-        # print(payload)
         return payload
 
     def update_page(self):
@@ -108,6 +125,8 @@ class Confluence():
             json=self.gen_payload()
         )
         if response.status_code == 200:
+            print(
+                f"http://wiki.dds-sysu.tech/pages/viewpage.action?pageId={self.page_id}")
             return True
         elif response.status_code == 409:
             try:
@@ -117,8 +136,6 @@ class Confluence():
                 self.version = int(current_version) + 1
                 self.try_num += 1
                 if self.try_num < TRY_MAX:
-                    # print("try again", self.version)
-                    # time.sleep(15)
                     return self.update_page()
                 else:
                     print("fail too many times, exit.")
@@ -133,16 +150,16 @@ class Confluence():
 
     def create_page(self):
         self.version = 1
-        responce = requests.get(
+        response = requests.get(
             f"{BASE_URL}/pages/createpage.action?spaceKey=~wbenature&fromPageId={self.cache['base_page_id']}&src=quick-create", headers=headers)
-        soup = BS(responce.text, "lxml")
+        soup = BS(response.text, "lxml")
         page_id = soup.select('meta[name="ajs-content-id"]')[0]['content']
         return page_id
 
     def is_modified(self):
-        responce = requests.get(
+        response = requests.get(
             f"{BASE_URL}/pages/resumedraft.action?draftId={self.page_id}", headers=headers)
-        soup = BS(responce.text, "lxml")
+        soup = BS(response.text, "lxml")
         soup_md = BS(soup.select("#wysiwygTextarea")[0].next_element, 'lxml')
 
         local = self.markdown.replace(

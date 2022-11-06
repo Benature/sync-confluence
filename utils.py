@@ -27,7 +27,7 @@ headers = {
 }
 
 
-def findAllFile(base):
+def find_all_files(base):
     for root, ds, fs in os.walk(base):
         for f in fs:
             if f.lower().endswith('.md'):
@@ -35,12 +35,32 @@ def findAllFile(base):
                 yield fullname
 
 
+def find_all_files_with_tag(base, tag):
+    tag = tag.lstrip("#")
+    for root, ds, fs in os.walk(base):
+        for f in fs:
+            if f.lower().endswith('.md'):
+                fullname = os.path.join(root, f)
+                with open(fullname, "r") as f:
+                    content = f.read()
+                if len(re.findall(r"tags:.*[\s:,]{0}|\s#{0}".format(tag), content)) > 0:
+                    yield fullname
+
+
 def wiki2link(m):
     title = m.group(1)
     alias = title
+    heading = ""
     if "|" in title:
         alias, title = title.split("|")
-    return f"[{alias}]({BASE_URL}/display/~{USER}/{title})"
+    if "#" in title:
+        title, heading = title.split("#")
+
+    link = f"[{alias}]({BASE_URL}/display/~{USER}/{title})"
+
+    if heading != "":
+        link = link[:-1] + f"#{heading})"
+    return link
 
 
 def md_meta(m):
