@@ -34,6 +34,10 @@ class Confluence():
         markdown = re.sub(r"\| *?\^\^ *?\|",
                           lambda m: m.group(0).replace("^^", "\\^\\^"), markdown)
 
+        # ad code box in Obsidian plugin
+        markdown = re.sub(r"```ad-[a-z]+(.*?)```",
+                          lambda m: m.group(1), markdown, flags=re.S)
+
         for k, v in replace_items.items():
             markdown = markdown.replace(k, v)
         content = f"<p class=\"auto-cursor-target\"><br /></p><table class=\"wysiwyg-macro\" style=\"background-image: url('{BASE_URL}/plugins/servlet/confluence/placeholder/macro-heading?definition=e25vdGV9&amp;locale=en_US&amp;version=2'); background-repeat: no-repeat;\" data-macro-name=\"note\" data-macro-schema-version=\"1\" data-macro-body-type=\"RICH_TEXT\" data-macro-id=\"aa1f3166-0644-4546-b0e3-0cf62607bcdb\"><tbody><tr><td class=\"wysiwyg-macro-body\"><p><span style=\"color: #a5adba;\"><em>本页面为脚本自动上传，额外修改将有被覆盖风险。</em></span></p></td></tr></tbody></table><p class=\"auto-cursor-target\"><br /></p><table class=\"wysiwyg-macro\" style=\"background-image: url('{BASE_URL}/plugins/servlet/confluence/placeholder/macro-heading?definition=e21hcmtkb3dufQ&amp;locale=en_US&amp;version=2'); background-repeat: no-repeat;\" data-macro-name=\"markdown\" data-macro-schema-version=\"1\" data-macro-body-type=\"PLAIN_TEXT\" data-macro-id=\"29063946-553e-4373-a400-b4dae28334b7\"><tbody><tr><td class=\"wysiwyg-macro-body\"><pre>{markdown}</pre></td></tr></tbody></table><p class=\"auto-cursor-target\"><br /></p>"

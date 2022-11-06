@@ -75,9 +75,8 @@ def upper_content(m):
     '''^[upper content]'''
     def func(match): return "^^"+match.group(0)[2:-1]+"^^"
     content = m.group(0)
-    content = re.sub(r"\^\[(?:[^\[]*?\[[^\[\]]+?\]\(.*?\).*?)*?\]",
+    content = re.sub(r"\^\[(?:[^\[]*?\[[^\[\]]+?\]\(.*?\).*?)*?\]|(?!\^)\^\[.*?\]",
                      func, content)
-    content = re.sub(r"(?!\^)\^\[.*?\]", func, content)
     return content
 
 
