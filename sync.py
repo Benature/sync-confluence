@@ -1,11 +1,15 @@
 from confluence import *
 
+sync_files = []
+
 
 def update(fn, **kwargs):
     print(fn)
     if confluence.read(fn, **kwargs):
         res = confluence.update_page()
         print("sync: ", "✅" if res else "❌")
+        if res:
+            sync_files.append(os.path.splitext(os.path.split(fn)[1])[0])
     print("=" * 40, "\n")
 
 
@@ -34,3 +38,6 @@ if __name__ == '__main__':
 
         else:
             raise TypeError(f"Unable to process type {type(folder)}. 🥲")
+
+    notify("Sync Confluence",
+           subtitle=f"{len(sync_files)} files", message=", ".join(sync_files), method="terminal-notifier")

@@ -1,3 +1,4 @@
+import platform
 import requests
 import os
 import re
@@ -159,3 +160,43 @@ class Tree():
                     tree=self.tree,
                 ),
                 f, ensure_ascii=False)
+
+
+def notify(title, message, subtitle='',
+           sound='Hero',
+           open='https://flomoapp.com/',
+           method='',
+           activate='',
+           icon='https://i.loli.net/2020/12/06/inPGAIkvbyK7SNJ.png',
+           contentImage='https://raw.githubusercontent.com/Benature/WordReview/ben/WordReview/static/media/muyi.png',
+           sender='com.apple.automator.Confluence',
+           terminal_notifier_path='terminal-notifier'):
+    sysstr = platform.system()
+
+    if sysstr == 'Darwin':  # macOS
+        # print('macOS notification')
+        if method == 'terminal-notifier':
+            '''https://github.com/julienXX/terminal-notifier'''
+
+            t = f'-title "{title}"'
+            m = f'-message "{message}"'
+
+            s = f'-subtitle "{subtitle}"'
+            icon = f'-appIcon "{icon}"'
+            sound = f'-sound "{sound}"'
+            sender = f'-sender "{sender}"'
+            contentImage = f'-contentImage "{contentImage}"'
+
+            activate = '' if activate == '' else f'-activate "{activate}"'
+            open = '' if open == '' else f'-open "{open}"'
+
+            cmd = '{} {} '.format(terminal_notifier_path,
+                                  ' '.join([m, t, s, icon, activate, open, sound, sender, contentImage]))
+            os.system(cmd)
+        else:
+            os.system(
+                f"""osascript -e 'display notification "{message}" with title "{title}"'""")
+    elif sysstr == "Windows":
+        print('TODO: windows notification')
+    elif sysstr == "Linux":
+        print('TODO: Linux notification')
