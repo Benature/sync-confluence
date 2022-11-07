@@ -119,8 +119,6 @@ class Tree():
         depth = 99
         naturalchildren_url = f"{BASE_URL}/plugins/pagetree/naturalchildren.action?&sort=position&reverse=false&disableLinks=false&expandCurrent=true&placement=sidebar&hasRoot=true&pageId={self.base_id}&treeId=0&startDepth={depth}"
         responce = requests.get(naturalchildren_url, headers=headers)
-        with open("dev/temp.html", "w") as f:
-            f.write(responce.text)
         soup = BS(responce.text, "lxml")
         return soup
 
