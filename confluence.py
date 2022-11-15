@@ -70,14 +70,14 @@ class Confluence():
             print("title       :", self.title)
             print("parent title:", self.parent_title)
 
-        try:
-            self.content = self.gen_content(markdown)
-            self.page_id = re.findall(
-                "confluence:[ ]*(\d+)", markdown)[0]
+        self.content = self.gen_content(markdown)
+        confluence_ids = re.findall("confluence:[ ]*(\d+)", markdown)
+        if len(confluence_ids) > 0:
+            self.page_id = confluence_ids[0]
             if not self.is_modified():
                 print("⏭  No modified, jumping this page...")
                 return False
-        except IndexError:
+        else:
             print("No confluence page id is recorded in the markdown file.")
             if self.title in self.cache['pages']:
                 self.page_id = self.get_page_id(self.title)
@@ -174,7 +174,8 @@ class Confluence():
 
     def is_modified(self):
         response = requests.get(
-            f"{BASE_URL}/pages/resumedraft.action?draftId={self.page_id}", headers=headers)
+            f"{BASE_URL}/pages/editpage.action?pageId={self.page_id}", headers=headers)
+
         soup = BS(response.text, "lxml")
         soup_md = BS(soup.select("#wysiwygTextarea")[0].next_element, 'lxml')
 
@@ -196,5 +197,4 @@ class Confluence():
                 print(
                     f"markdown file is moved. (from {prefix[-1]} to {self.parent_title})")
                 return True
-
         return False

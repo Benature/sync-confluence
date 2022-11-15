@@ -28,7 +28,6 @@ if __name__ == '__main__':
                     confluence.read(dir_title, empty=True)
                     confluence.update_page()
                 update(fn)
-
         elif isinstance(folder, dict):
             parent_title = folder['parent_title']
             for fn in find_all_files_with_tag(folder['path'], folder['tag'].lstrip("#")):
@@ -40,4 +39,4 @@ if __name__ == '__main__':
             raise TypeError(f"Unable to process type {type(folder)}. 🥲")
 
     notify("Sync Confluence",
-           subtitle=f"{len(sync_files)} files", message=", ".join(sync_files), method="terminal-notifier")
+           subtitle=f"{len(sync_files)} modified files", message=", ".join(sync_files), method="terminal-notifier")
