@@ -2,6 +2,7 @@ from utils import *
 
 
 class Confluence():
+
     def __init__(self):
         self.version = 1
         self.cache = self.load_cache()
@@ -21,10 +22,13 @@ class Confluence():
 
     def gen_content(self, markdown):
         self.reset()
-        markdown = re.sub(r"^---(\n.*?)\n---", md_meta,
-                          markdown, count=1, flags=re.S)  # meta data
-        markdown = re.sub(r"\[\[([^\[\]\s]+)\]\]",
-                          wiki2link, markdown)  # wiki link
+        markdown = re.sub(r"^---(\n.*?)\n---",
+                          md_meta,
+                          markdown,
+                          count=1,
+                          flags=re.S)  # meta data
+        markdown = re.sub(r"\[\[([^\[\]\s]+)\]\]", wiki2link,
+                          markdown)  # wiki link
 
         # ^[upper content]
         markdown = re.sub(r"\n.*?\^\[.+?\].*?\n", upper_content, markdown)
@@ -32,11 +36,14 @@ class Confluence():
         # tx table in Obsidian plugin
         markdown = re.sub(r"\n-tx-\n", "\n", markdown)
         markdown = re.sub(r"\| *?\^\^ *?\|",
-                          lambda m: m.group(0).replace("^^", "\\^\\^"), markdown)
+                          lambda m: m.group(0).replace("^^", "\\^\\^"),
+                          markdown)
 
         # ad code box in Obsidian plugin
         markdown = re.sub(r"```ad-[a-z]+(.*?)```",
-                          lambda m: m.group(1), markdown, flags=re.S)
+                          lambda m: m.group(1),
+                          markdown,
+                          flags=re.S)
 
         for k, v in replace_items.items():
             markdown = markdown.replace(k, v)
@@ -82,17 +89,23 @@ class Confluence():
             if self.title in self.cache['pages']:
                 self.page_id = self.get_page_id(self.title)
                 print(
-                    f"Find the page id in the pages tree, the id is {self.page_id}")
+                    f"Find the page id in the pages tree, the id is {self.page_id}"
+                )
             else:
-                print("No confluence page id found, creating a new page for it...")
+                print(
+                    "No confluence page id found, creating a new page for it..."
+                )
                 self.page_id = self.create_page()
             if not empty:
                 print("Adding confluence page id to markdown metadata...")
                 if re.match(r"^---\n.*?\n---", markdown, flags=re.S) is None:
                     markdown = f"---\nconfluence: {self.page_id}\n---\n" + markdown
                 else:
-                    markdown = re.sub(r"^---\n.*?\n---", lambda m: m.group(0).rstrip('-') +
-                                      f"confluence: {self.page_id}\n---", markdown, flags=re.S)
+                    markdown = re.sub(r"^---\n.*?\n---",
+                                      lambda m: m.group(0).rstrip('-') +
+                                      f"confluence: {self.page_id}\n---",
+                                      markdown,
+                                      flags=re.S)
                 with open(fn, "w") as f:
                     f.write(markdown)
                 self.content = self.gen_content(markdown)
@@ -103,12 +116,16 @@ class Confluence():
         payload = {
             "status": "current",
             "title": self.title,
-            "space": {"key": f"~{USER}"},
+            "space": {
+                "key": f"~{USER}"
+            },
             "body": {
                 "editor": {
                     "value": self.content,
                     "representation": "editor",
-                    "content": {"id": self.page_id}
+                    "content": {
+                        "id": self.page_id
+                    }
                 }
             },
             "id": self.page_id,
@@ -131,23 +148,26 @@ class Confluence():
             #         json.dump(self.cache, f, ensure_ascii=False)
 
             payload.update(
-                {"ancestors": [{"id": parent_page_id, "type": "page"}]})
+                {"ancestors": [{
+                    "id": parent_page_id,
+                    "type": "page"
+                }]})
         return payload
 
     def update_page(self):
-        response = requests.put(
-            f"{BASE_URL}/rest/api/content/{self.page_id}",
-            headers=headers,
-            json=self.gen_payload()
-        )
+        response = requests.put(f"{BASE_URL}/rest/api/content/{self.page_id}",
+                                headers=headers,
+                                json=self.gen_payload())
         if response.status_code == 200:
             print(
-                f"http://wiki.dds-sysu.tech/pages/viewpage.action?pageId={self.page_id}")
+                f"http://wiki.dds-sysu.tech/pages/viewpage.action?pageId={self.page_id}"
+            )
             return True
         elif response.status_code == 409:
             try:
                 current_version = re.findall(
-                    r'Current version is: (\d+)', json.loads(response.text)['message'])[0]
+                    r'Current version is: (\d+)',
+                    json.loads(response.text)['message'])[0]
                 print("current version:", current_version)
                 self.version = int(current_version) + 1
                 self.try_num += 1
@@ -167,20 +187,22 @@ class Confluence():
     def create_page(self):
         self.version = 1
         response = requests.get(
-            f"{BASE_URL}/pages/createpage.action?spaceKey=~wbenature&fromPageId={self.cache['base_page_id']}&src=quick-create", headers=headers)
+            f"{BASE_URL}/pages/createpage.action?spaceKey=~wbenature&fromPageId={self.cache['base_page_id']}&src=quick-create",
+            headers=headers)
         soup = BS(response.text, "lxml")
         page_id = soup.select('meta[name="ajs-content-id"]')[0]['content']
         return page_id
 
     def is_modified(self):
         response = requests.get(
-            f"{BASE_URL}/pages/editpage.action?pageId={self.page_id}", headers=headers)
+            f"{BASE_URL}/pages/editpage.action?pageId={self.page_id}",
+            headers=headers)
 
         soup = BS(response.text, "lxml")
         soup_md = BS(soup.select("#wysiwygTextarea")[0].next_element, 'lxml')
 
-        local = self.markdown.replace(
-            "&lt;", "<").replace("&gt;", ">").strip(" \n")
+        local = self.markdown.replace("&lt;", "<").replace("&gt;",
+                                                           ">").strip(" \n")
         remote = soup_md.select("pre")[0].next_element.strip(" \n")
 
         if local != remote:  # markdown file content is modified
@@ -195,6 +217,7 @@ class Confluence():
         if len(prefix) > 0:
             if self.parent_title != prefix[-1]:
                 print(
-                    f"markdown file is moved. (from {prefix[-1]} to {self.parent_title})")
+                    f"markdown file is moved. (from {prefix[-1]} to {self.parent_title})"
+                )
                 return True
         return False

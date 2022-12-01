@@ -30,7 +30,8 @@ if __name__ == '__main__':
                 update(fn)
         elif isinstance(folder, dict):
             parent_title = folder['parent_title']
-            for fn in find_all_files_with_tag(folder['path'], folder['tag'].lstrip("#")):
+            for fn in find_all_files_with_tag(folder['path'],
+                                              folder['tag'].lstrip("#")):
                 if parent_title not in confluence.cache['pages']:
                     raise ValueError(f"Unknown page {parent_title}")
                 update(fn, parent_title=parent_title)
@@ -39,4 +40,6 @@ if __name__ == '__main__':
             raise TypeError(f"Unable to process type {type(folder)}. 🥲")
 
     notify("Sync Confluence",
-           subtitle=f"{len(sync_files)} modified files", message=", ".join(sync_files), method="terminal-notifier")
+           subtitle=f"{len(sync_files)} modified files",
+           message=", ".join(sync_files),
+           method="terminal-notifier")
