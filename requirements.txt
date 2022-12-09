@@ -1,3 +1,5 @@
 lxml
 bs4
 requests
+pycryptodomex
+keyring
