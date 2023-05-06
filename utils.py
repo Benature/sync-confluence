@@ -133,7 +133,6 @@ class Tree():
         if pointer is None:
             soup = self._get_children()
             pointer = soup.body.ul.li
-        print(pointer)
         while pointer is not None:
             has_children = len(
                 pointer.select('.plugin_pagetree_childtoggle_container')

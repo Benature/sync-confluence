@@ -5,7 +5,7 @@ from Cryptodome.Cipher import AES
 import keyring
 import json
 
-from config import cookies_path, host_key
+from config import cookies_path, host_key, cookie_cache_fn
 
 # %%
 # https://github.com/Noskthing/Scripts/blob/master/getChromeCookies_macOS.py
@@ -70,5 +70,5 @@ for host_key, path, expires_utc, name, value, encrypted_value in cursor:
 conn.close()
 
 # %%
-with open('cache.json', 'w') as f:
+with open(cookie_cache_fn, 'w') as f:
     json.dump(cookies, f)
