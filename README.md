@@ -8,11 +8,19 @@ Init config file:
 cp config_sample.py config.py
 ```
 
+Update cookies (from `Microsoft Edge`)
+
+```shell
+python cookies.py
+```
+
 Usage:
 
 ```shell
 python sync.py
 ```
+
+If the code encounter errors, check your cookies at first.
 
 ## TODO
 - [ ] support local images

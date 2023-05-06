@@ -107,14 +107,13 @@ class Tree():
 
     def _get_base_id(self):
         json_path = os.path.join(root_path, f"cache/{USER}.json")
-        try:
+        if os.path.exists(json_path):
             with open(json_path, "r") as f:
                 data = json.load(f)
             base_id = data['base_page_id']
-        except:
-            responce = requests.get(
-                f"{BASE_URL}/spaces/viewspace.action?key=~{USER}",
-                headers=headers)
+        else:
+            url = f"{BASE_URL}/spaces/viewspace.action?key=~{USER}"
+            responce = requests.get(url, headers=headers)
             soup = BS(responce.text, "lxml")
             soup.select('.name')[0].next_element
             base_id = get_page_id(soup.select('.name')[0].next_element['href'],
@@ -134,7 +133,7 @@ class Tree():
         if pointer is None:
             soup = self._get_children()
             pointer = soup.body.ul.li
-
+        print(pointer)
         while pointer is not None:
             has_children = len(
                 pointer.select('.plugin_pagetree_childtoggle_container')
@@ -142,6 +141,7 @@ class Tree():
             a = pointer.select('.plugin_pagetree_children_span')[0].select(
                 'a')[0]
             title = a.text
+            print(title)
             page_id = get_page_id(a['href'], force=False)
             sub_tree.append(dict(title=title, children=[]))
             self.pages[title] = dict(page_id=page_id, prefix=prefix)
